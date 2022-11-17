@@ -1,4 +1,4 @@
-microrunqc-wdl Encode Pipeline
+microrunqc-wdl Pipeline
 =============================================
 
 # Directories
@@ -8,5 +8,5 @@ microrunqc-wdl Encode Pipeline
 * `examples/` : input JSON examples (SE and PE)
 * `data/` : data TSV files for each platform
 * `src/` : scripts for each task in WDL
-* `docker/` : Dockerfile and MySQL DB initialization script
+* `docker/` : Dockerfiles
 * `test/` : test scripts for developers
