@@ -2,62 +2,121 @@
 # Author: Justin Payne (justin.payne@fda.hhs.gov)
 
 workflow microrunqc {
-    String? empty
-    String? s = "world"
 
-    call hello_A as ha1
-    call hello_A as ha2 { input: who = empty }
-    call hello_A as ha3 { input: who = "Porcupine" }
+    Array[Array[File]] paired_reads
 
-    call hello_B as hb1 { input: who = s }
-
-    call hello_C as hc1
-    call hello_C as hc2 { input: who = empty }
-    call hello_C as hc3 { input: who = "Porcupine" }
-
-    output {
-        String ra1 = ha1.result
-        String ra2 = ha2.result
-        String ra3 = ha3.result
-        String rb1 = hb1.result
-        String rc1 = hc1.result
-        String rc2 = hc2.result
-        String rc3 = hc3.result
+    scatter (read_pair in paired_reads){
+        call trim { forward=read_pair[0], reverse=read_pair[1] }
+        call assemble { forward=trim.forward, reverse=trim.reverse }
+        call profile { assembly=assemble.assembly }
     }
+
+    call concatenate { profiles=profile.profile }
+
+    meta {
+        author: "Justin Payne, Errol Strain, Jayanthi Gangiredla"
+        email: "justin.payne@fda.hhs.gov, errol.strain@fda.hhs.gov, jayanthi.gangiredla@fda.hhs.gov"
+        description: "a quality control pipeline, the WDL version of GalaxyTrakr's MicroRunQC"
+    }
+
+
+
 }
 
-task hello_A {
-    String? who = "world"
+
+
+task trim {
+    File forward
+    File reverse
 
     command {
-        echo "Hello, ${who}"
+
     }
+
     output {
-        String result = read_string(stdout())
+        File forward
+        File reverse
     }
+
+    runtime {
+        docker: "staphb/trimmomatic:0.39"
+        cpu: 2
+        memory: "1024 MB"
+    }
+
+    parameter_meta {
+        forward: "Paired-end reads, forward orientation"
+        reverse: "Paired-end reads, reverse orientation"
+    }
+
 }
 
-
-task hello_B {
-    String who
+task assemble {
+    File forward
+    File reverse
 
     command {
-        echo "Hello, ${who}"
+
     }
+
     output {
-        String result = read_string(stdout())
+        File assembly
     }
+
+    runtime {
+        docker: "staphb/skesa:2.4.0"
+        cpu: 8
+        memory: "4096 MB"
+    }
+
+    parameter_meta {
+        forward: "Paired-end reads, forward orientation"
+        reverse: "Paired-end reads, reverse orientation"
+    }
+
 }
 
-
-task hello_C {
-    String? who
-    String who_actual = select_first([who, "dave.jones"])
+task profile {
+    File assembly
 
     command {
-        echo "Hello, ${who_actual}"
+
     }
+
     output {
-        String result = read_string(stdout())
+        File profile
+    }
+
+    runtime {
+        docker: "staphb/mlst:2.23.0"
+        cpu: 4
+        memory: "2048 MB"
+    }
+
+    parameter_meta {
+        assembly: "Contigs from draft assembly"
     }
 }
+
+task concatenate {
+    Array[File] profiles
+
+    command {
+
+    }
+
+    output {
+        File report
+    }
+
+    runtime {
+        docker: "cfsanbiostatistics/table-ops:latest"
+        cpu: 1
+        memory: "512 MB"
+    }
+
+    parameter_meta {
+        profiles: "List of MLST results"
+    }
+}
+
