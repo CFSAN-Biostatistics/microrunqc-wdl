@@ -7,7 +7,7 @@ workflow microrunqc {
 
     scatter (read_pair in paired_reads){
         call trim { forward=read_pair[0], reverse=read_pair[1] }
-        call assemble { forward=trim.forward, reverse=trim.reverse }
+        call assemble { forward=trim.forward_t, reverse=trim.reverse_t }
         call profile { assembly=assemble.assembly }
     }
 
@@ -30,12 +30,12 @@ task trim {
     File reverse
 
     command {
-
+        trimmomatic PE -threads 2 $forward $reverse $forward_t $reverse_t
     }
 
     output {
-        File forward
-        File reverse
+        File forward_t
+        File reverse_t
     }
 
     runtime {
@@ -56,7 +56,7 @@ task assemble {
     File reverse
 
     command {
-
+        skesa --cores 8 --memory 4 --reads $forward --reads $reverse --contigs_out $assembly
     }
 
     output {
@@ -80,7 +80,7 @@ task profile {
     File assembly
 
     command {
-
+        mlst --csv $assembly > $profile
     }
 
     output {
@@ -102,7 +102,7 @@ task concatenate {
     Array[File] profiles
 
     command {
-
+        
     }
 
     output {
