@@ -80,7 +80,7 @@ task profile {
     File assembly
 
     command {
-        mlst --csv $assembly > $profile
+        mlst $assembly > $profile
     }
 
     output {
@@ -102,7 +102,7 @@ task concatenate {
     Array[File] profiles
 
     command {
-        
+        python table-union.py $profiles > $results
     }
 
     output {
@@ -116,7 +116,7 @@ task concatenate {
     }
 
     parameter_meta {
-        profiles: "List of MLST results"
+        results: "List of MLST results"
     }
 }
 
