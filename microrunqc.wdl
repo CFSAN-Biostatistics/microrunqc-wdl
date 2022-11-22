@@ -1,17 +1,21 @@
 # FDA-CFSAN microrunqc-wdl
 # Author: Justin Payne (justin.payne@fda.hhs.gov)
 
+version 1.0
+
 workflow microrunqc {
 
-    Array[Array[File]] paired_reads
-
-    scatter (read_pair in paired_reads){
-        call trim { forward=read_pair[0], reverse=read_pair[1] }
-        call assemble { forward=trim.forward_t, reverse=trim.reverse_t }
-        call profile { assembly=assemble.assembly }
+    input {
+        Array[Pair[File, File]] paired_reads
     }
 
-    call concatenate { profiles=profile.profile }
+    scatter (read_pair in paired_reads) {
+        call trim { input:forward=read_pair.left, reverse=read_pair.right }
+        call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t }
+        call profile { input:assembly=assemble.assembly }
+    }
+
+    call concatenate { input:profiles=profile.profil }
 
     meta {
         author: "Justin Payne, Errol Strain, Jayanthi Gangiredla"
@@ -26,16 +30,19 @@ workflow microrunqc {
 
 
 task trim {
-    File forward
-    File reverse
+
+    input {
+        File forward
+        File reverse
+    }
 
     command {
-        trimmomatic PE -threads 2 $forward $reverse $forward_t $reverse_t
+        trimmomatic PE -threads 2 ${forward} ${reverse} forward_t.fq reverse_t.fq
     }
 
     output {
-        File forward_t
-        File reverse_t
+        File forward_t = "forward_t.fq"
+        File reverse_t = "reverse_t.fq"
     }
 
     runtime {
@@ -52,15 +59,17 @@ task trim {
 }
 
 task assemble {
-    File forward
-    File reverse
+    input {
+        File forward
+        File reverse
+    }
 
     command {
-        skesa --cores 8 --memory 4 --reads $forward --reads $reverse --contigs_out $assembly
+        skesa --cores 8 --memory 4 --reads ${forward} --reads ${reverse} --contigs_out assembly.fa
     }
 
     output {
-        File assembly
+        File assembly = "assembly.fa"
     }
 
     runtime {
@@ -77,14 +86,16 @@ task assemble {
 }
 
 task profile {
-    File assembly
+    input {
+        File assembly
+    }
 
     command {
-        mlst $assembly > $profile
+        mlst ${assembly} > profile.tsv
     }
 
     output {
-        File profile
+        File profil = "profile.tsv"
     }
 
     runtime {
@@ -99,14 +110,16 @@ task profile {
 }
 
 task concatenate {
-    Array[File] profiles
+    input {
+        Array[File] profiles
+    }
 
     command {
-        python table-union.py $profiles > $results
+        python table-union.py ${sep=' ' profiles} > results.tsv
     }
 
     output {
-        File report
+        File report = "results.tsv"
     }
 
     runtime {
