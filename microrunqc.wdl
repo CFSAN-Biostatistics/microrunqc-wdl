@@ -12,15 +12,20 @@ workflow microrunqc {
     scatter (read_pair in paired_reads) {
         call trim { input:forward=read_pair.left, reverse=read_pair.right }
         call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t }
-        call profile { input:assembly=assemble.assembly }
     }
 
-    call concatenate { input:profiles=profile.profil }
+    call profile { input:assemblies=assemble.assembly }
+
+    # call concatenate { input:profiles=profile.profil }
 
     meta {
         author: "Justin Payne, Errol Strain, Jayanthi Gangiredla"
         email: "justin.payne@fda.hhs.gov, errol.strain@fda.hhs.gov, jayanthi.gangiredla@fda.hhs.gov"
         description: "a quality control pipeline, the WDL version of GalaxyTrakr's MicroRunQC"
+    }
+
+    output {
+        File results = profile.report
     }
 
 
@@ -36,9 +41,10 @@ task trim {
         File reverse
     }
 
-    command {
-        trimmomatic PE -threads 2 ${forward} ${reverse} forward_t.fq reverse_t.fq
-    }
+    command <<< 
+        trimmomatic PE -threads 2 -phred33 <(gunzip -c ~{forward}) <(gunzip -c ~{reverse}) forward_t.fq /dev/null reverse_t.fq /dev/null MINLEN:1 
+    >>>
+    
 
     output {
         File forward_t = "forward_t.fq"
@@ -46,7 +52,7 @@ task trim {
     }
 
     runtime {
-        docker: "staphb/trimmomatic:0.39"
+        container: "staphb/trimmomatic:0.39"
         cpu: 2
         memory: "1024 MB"
     }
@@ -64,16 +70,17 @@ task assemble {
         File reverse
     }
 
-    command {
-        skesa --cores 8 --memory 4 --reads ${forward} --reads ${reverse} --contigs_out assembly.fa
-    }
+    command <<< 
+        skesa --cores 8 --memory 4 --reads ~{forward} --reads ~{reverse} --contigs_out assembly.fa
+    >>>
+    
 
     output {
         File assembly = "assembly.fa"
     }
 
     runtime {
-        docker: "staphb/skesa:2.4.0"
+        container: "staphb/skesa:2.4.0"
         cpu: 8
         memory: "4096 MB"
     }
@@ -87,49 +94,47 @@ task assemble {
 
 task profile {
     input {
-        File assembly
+        Array[File] assemblies
     }
 
-    command {
-        mlst ${assembly} > profile.tsv
-    }
+    command <<< mlst ~{sep=' ' assemblies} >>>
 
     output {
-        File profil = "profile.tsv"
+        File report = stdout()
     }
 
     runtime {
-        docker: "staphb/mlst:2.23.0"
-        cpu: 4
-        memory: "2048 MB"
+        container: "staphb/mlst:2.23.0"
+        cpu: 8
+        memory: "4096 MB"
     }
 
     parameter_meta {
-        assembly: "Contigs from draft assembly"
+        assemblies: "Contigs from draft assemblies"
     }
 }
 
-task concatenate {
-    input {
-        Array[File] profiles
-    }
+# task concatenate {
+#     input {
+#         Array[File] profiles
+#     }
 
-    command {
-        python table-union.py ${sep=' ' profiles} > results.tsv
-    }
+#     command {
+#         python /tools/table-union.py ${sep=' ' profiles} > results.tsv
+#     }
 
-    output {
-        File report = "results.tsv"
-    }
+#     output {
+#         File report = "results.tsv"
+#     }
 
-    runtime {
-        docker: "cfsanbiostatistics/table-ops:latest"
-        cpu: 1
-        memory: "512 MB"
-    }
+#     runtime {
+#         docker: "cfsanbiostatistics/table-ops:latest"
+#         cpu: 1
+#         memory: "512 MB"
+#     }
 
-    parameter_meta {
-        results: "List of MLST results"
-    }
-}
+#     parameter_meta {
+#         results: "List of MLST results"
+#     }
+# }
 
