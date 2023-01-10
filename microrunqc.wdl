@@ -4,7 +4,7 @@
 version 1.0
 
 import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
-import "https://github.com/biowdl/tasks/raw/develop/bwa-mem2.wdl" as bwa2
+# import "https://github.com/biowdl/tasks/raw/develop/bwa-mem2.wdl" as bwa2
 
 workflow microrunqc {
 
@@ -19,22 +19,36 @@ workflow microrunqc {
         call identify {input:forward=read_pair.left}
         call trim { input:forward=read_pair.left, reverse=read_pair.right, name=identify.name }
         call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
-        call bioawk {input: assembly=assemble.assembly}
-        call scan as scan_forward {input: file=trim.forward_t, length=bioawk.size}
-        call scan as scan_reverse {input: file=trim.reverse_t, length=bioawk.size}
-        call bwa.Index {input:fasta=assemble.assembly}
+        call profile { input:assembly=assemble.assembly }
+        call bioawk { input:assembly=assemble.assembly }
+        call scan as scan_forward { input:file=trim.forward_t, length=bioawk.size }
+        call scan as scan_reverse { input:file=trim.reverse_t, length=bioawk.size }
+        call bwa.Index { input:fasta=assemble.assembly }
         call bwa.Mem {
             input:read1=trim.forward_t, 
                   read2=trim.reverse_t, 
                   bwaIndex=Index.index,
                   outputPrefix=identify.name,
-                  threads=max_threads}
+                  threads=max_threads
+            }
+        call sam { input:bamfile=Mem.outputBam }
+        call stat { input:samfile=sam.samfile, coverages=assemble.coverages }
+        call report {
+            input: 
+                name=identify.name,
+                size=bioawk.size,
+                num_contigs=assemble.num_contigs,
+                mlst=profile.report, 
+                fscan=scan_forward.result, 
+                rscan=scan_reverse.result,
+                stats=stat.result
+            }
     }
 
-    call profile { input:assemblies=assemble.assembly }
+    call aggregate {input: files=report.record}
 
     output {
-        File results = profile.report
+        File results = aggregate.result
     }
 
     # call concatenate { input:profiles=profile.profil }
@@ -120,11 +134,15 @@ task assemble {
     command <<< 
         set -e
         skesa --cores 8 --memory 4 --reads ~{forward} --reads ~{reverse} --contigs_out ~{name}.fa
+        grep '>' ~{name}.fa | cut -f 3 -d _ > ~{name}.coverages.txt
+        grep '>' ~{name}.fa | wc -l > num_contigs.txt
     >>>
     
 
     output {
         File assembly = "~{name}.fa"
+        File coverages = "~{name}.coverages.txt"
+        Int num_contigs = read_int("num_contigs.txt")
     }
 
     runtime {
@@ -140,13 +158,32 @@ task assemble {
 
 }
 
+task sam {
+    input {
+        File bamfile
+    }
+
+    command <<<
+        samtools view -h -o out.sam ~{bamfile}
+    >>>
+
+    output {
+        File samfile = "out.sam"
+    }
+
+    runtime {
+        container: "staphb/samtools:latest"
+        cpu: 1
+        memory: "512 MB"
+    }
+}
+
 task bioawk {
     input {
         File assembly
     }
 
     command <<<
-        set -e
         bioawk -c fastx '{ total+=length($seq) } END{ print total }' < ~{assembly}
     >>>
 
@@ -168,12 +205,11 @@ task bioawk {
 
 task profile {
     input {
-        Array[File] assemblies
+        File assembly
     }
 
     command <<< 
-        set -e
-        mlst ~{sep=' ' assemblies} 
+        mlst ~{assembly} 
     >>>
 
     output {
@@ -198,16 +234,131 @@ task scan {
     }
 
     command <<<
-        set -e
         fastq-scan -g ~{length} < ~{file}
     >>>
 
     output {
-        File results = stdout()
+        File result = stdout()
     }
 
     runtime {
         container: "staphb/fastq-scan:latest"
+        cpu: 1
+        memory: "512 MB"
+    }
+}
+
+task stat {
+    input {
+        File samfile
+        File coverages
+    }
+
+    command <<<
+        python <<CODE
+import statistics
+import json
+# Simple statistical computations for insert size and assembly coverage
+lengths = []
+with open("~{samfile}") as sam:
+    for line in sam:
+        if not line.startswith('@'):
+            length = abs(int(line.rsplit()[8]))
+            if length:
+                lengths.append(length)
+
+median_insert = statistics.median(lengths)
+
+with open("~{coverages}") as coverages:
+    cvgs = [float(line.strip()) for line in coverages]
+
+average_coverage = statistics.mean(cvgs)
+
+print(json.dumps(dict(
+    median_insert=median_insert,
+    average_coverage=average_coverage
+)))
+CODE
+    >>>
+
+    output {
+        Map[String, Float] result = read_json(stdout())
+    }
+
+    runtime {
+        container: "python:3.10"
+        cpu: 1
+        memory: "512 MB"
+    }
+}
+
+task report {
+    input {
+        String name = "sample"
+        String size = "0"
+        Int num_contigs = 0
+        File mlst
+        File fscan
+        File rscan
+        Map[String, Float] stats
+    }
+
+    command <<<
+        python <<CODE
+import json
+import csv
+with open("~{name}.csv", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}") as fscan, open("~{rscan}") as rscan:
+    fw = json.load(fscan)
+    rv = json.load(rscan)
+    keys = ('File','Contigs','Length','EstCov','N50','MedianInsert','MeanLength_R1','MeanLength_R2','MeanQ_R1','MeanQ_R2','Scheme','ST')
+    rdr = csv.reader(mlst, delimiter="\t")
+    _, scheme, st, *_ = next(rdr)
+    wtr = csv.DictWriter(record, fieldnames=keys) # we're just using the keys to set the field order
+    rec = dict(
+        File="~{name}",
+        Contigs="~{num_contigs}",
+        Length="~{size}",
+        EstCov='~{stats["average_coverage"]}',
+        N50="",
+        MedianInsert='~{stats["median_insert"]}',
+        MeanLength_R1=fw['qc_stats']['read_mean'],
+        MeanLength_R2=rv['qc_stats']['read_mean'],
+        MeanQ_R1=fw['qc_stats']['qual_mean'],
+        MeanQ_R2=rv['qc_stats']['qual_mean'],
+        Scheme=scheme,
+        ST=st
+    )
+    wtr.writerow(rec)
+CODE
+    >>>
+
+    output {
+        File record = "~{name}.csv"
+    }
+
+    runtime {
+        container: "python:3.10"
+        cpu: 1
+        memory: "512 MB"
+    }
+}
+
+task aggregate {
+    input {
+        Array[File] files
+    }
+
+    command <<<
+        echo "File,Contigs,Length,EstCov,N50,MedianInsert,MeanLength_R1,MeanLength_R2,MeanQ_R1,MeanQ_R2,Scheme,ST" > report.csv
+        cat ~{sep=' ' files} >> report.csv
+    >>>
+
+    output {
+        File result = "report.csv"
+    }
+
+    runtime {
+        container: "ubuntu:xenial"
         cpu: 1
         memory: "512 MB"
     }
