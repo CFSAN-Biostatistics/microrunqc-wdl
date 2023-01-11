@@ -19,6 +19,7 @@ workflow microrunqc {
         call identify {input:forward=read_pair.left}
         call trim { input:forward=read_pair.left, reverse=read_pair.right, name=identify.name }
         call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
+        call computeN50 { input:assembly=assemble.assembly }
         call profile { input:assembly=assemble.assembly }
         call bioawk { input:assembly=assemble.assembly }
         call scan as scan_forward { input:file=trim.forward_t, length=bioawk.size }
@@ -38,6 +39,7 @@ workflow microrunqc {
                 name=identify.name,
                 size=bioawk.size,
                 num_contigs=assemble.num_contigs,
+                n50 = computeN50.n50,
                 mlst=profile.report, 
                 fscan=scan_forward.result, 
                 rscan=scan_reverse.result,
@@ -292,11 +294,32 @@ CODE
     }
 }
 
+task computeN50 {
+    input {
+        File assembly
+    }
+
+    command <<<
+        seqtk comp ~{assembly} | cut -f 2 | sort -rn | awk '{ sum += $0; print $0, sum }' | tac | awk 'NR==1 { halftot=$2/2 } lastsize>halftot && $2<halftot { print $1 } { lastsize=$2 }'
+    >>>
+
+    output {
+        Int n50 = read_int(stdout())
+    }
+
+    runtime {
+        container: "staphb/seqtk:latest"
+        cpu: 1
+        memory: "512 MB"
+    }
+}
+
 task report {
     input {
         String name = "sample"
         String size = "0"
         Int num_contigs = 0
+        Int n50 = 0
         File mlst
         File fscan
         File rscan
@@ -319,7 +342,7 @@ with open("~{name}.csv", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}
         Contigs="~{num_contigs}",
         Length="~{size}",
         EstCov='~{stats["average_coverage"]}',
-        N50="",
+        N50="~{n50}",
         MedianInsert='~{stats["median_insert"]}',
         MeanLength_R1=fw['qc_stats']['read_mean'],
         MeanLength_R2=rv['qc_stats']['read_mean'],
@@ -387,4 +410,3 @@ task aggregate {
 #         results: "List of MLST results"
 #     }
 # }
-
