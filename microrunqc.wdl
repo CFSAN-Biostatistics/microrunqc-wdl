@@ -87,6 +87,10 @@ task identify {
         memory: "1024 MB"
     }
 
+    parameter_meta {
+        forward: "Paired-end reads, forward orientation"
+    }
+
 
 }
 
@@ -156,6 +160,7 @@ task assemble {
     parameter_meta {
         forward: "Paired-end reads, forward orientation"
         reverse: "Paired-end reads, reverse orientation"
+        name: "A name for the assembly, no spaces or bash-special characters"
     }
 
 }
@@ -178,6 +183,11 @@ task sam {
         cpu: 1
         memory: "512 MB"
     }
+
+    parameter_meta {
+        bamfile: "Input file, in BAM format"
+    }
+
 }
 
 task bioawk {
@@ -225,7 +235,7 @@ task profile {
     }
 
     parameter_meta {
-        assemblies: "Contigs from draft assemblies"
+        assembly: "Contigs from draft assemblies"
     }
 }
 
@@ -248,6 +258,12 @@ task scan {
         cpu: 1
         memory: "512 MB"
     }
+
+    parameter_meta {
+        file: "Assembly file in FASTA format"
+        length: "Presumed genome lengthn"
+    }
+
 }
 
 task stat {
@@ -292,6 +308,12 @@ CODE
         cpu: 1
         memory: "512 MB"
     }
+
+    parameter_meta {
+        samfile: "Alignment file, in SAM format"
+        coverages: "List of coverage values from the assembly step"
+    }
+
 }
 
 task computeN50 {
@@ -311,6 +333,10 @@ task computeN50 {
         container: "staphb/seqtk:latest"
         cpu: 1
         memory: "512 MB"
+    }
+
+    parameter_meta {
+        assembly: "Assembly file in FASTA"
     }
 }
 
@@ -364,6 +390,18 @@ CODE
         cpu: 1
         memory: "512 MB"
     }
+
+    parameter_meta {
+        name: "Sample name, no special chars"
+        size: "Assembly length in BP"
+        num_contigs: "Number of assembly contigs"
+        n50: "N50 of assembly"
+        mlst: "MLST profile file"
+        fscan: "Result of FASTQ-Scan on Forward file"
+        rscan: "Result of FASTQ-Scan on reverse File"
+        stats: "Other stats from the stats step"
+    }
+
 }
 
 task aggregate {
@@ -385,6 +423,11 @@ task aggregate {
         cpu: 1
         memory: "512 MB"
     }
+
+    parameter_meta {
+        files: "Report rows from the report step"
+    }
+
 }
 
 # task concatenate {
