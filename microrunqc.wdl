@@ -131,6 +131,7 @@ task trim {
 }
 
 task assemble {
+
     input {
         File forward
         File reverse
@@ -166,6 +167,7 @@ task assemble {
 }
 
 task sam {
+
     input {
         File bamfile
     }
@@ -191,6 +193,7 @@ task sam {
 }
 
 task bioawk {
+
     input {
         File assembly
     }
@@ -216,11 +219,12 @@ task bioawk {
 }
 
 task profile {
+
     input {
         File assembly
     }
 
-    command <<< 
+    command <<<
         mlst ~{assembly} 
     >>>
 
@@ -240,6 +244,7 @@ task profile {
 }
 
 task scan {
+
     input {
         File file
         String length
@@ -267,6 +272,7 @@ task scan {
 }
 
 task stat {
+
     input {
         File samfile
         File coverages
