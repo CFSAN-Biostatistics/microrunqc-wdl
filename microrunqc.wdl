@@ -72,7 +72,7 @@ task identify {
         File forward
     }
 
-    command <<< 
+    command <<<
         set -e
         gunzip -c ~{forward} | head -n 1 | cut -d@ -f2- |cut -d. -f1 
     >>>
@@ -104,7 +104,7 @@ task trim {
         String name = "reads"
     }
 
-    command <<< 
+    command <<<
         set -e
         gunzip -c ~{forward} > fwd.fq 
         gunzip -c ~{reverse} > rev.fq
@@ -138,7 +138,7 @@ task assemble {
         String name = "assembly"
     }
 
-    command <<< 
+    command <<<
         set -e
         skesa --cores 8 --memory 4 --reads ~{forward} --reads ~{reverse} --contigs_out ~{name}.fa
         grep '>' ~{name}.fa | cut -f 3 -d _ > ~{name}.coverages.txt
