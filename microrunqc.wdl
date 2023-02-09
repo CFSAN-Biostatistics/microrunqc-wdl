@@ -17,10 +17,8 @@ workflow microrunqc {
 
     # scatter (read_pair in paired_reads) {
 
-    Pair[File, File] read_pair = [left, right]
-
-    call identify {input:forward=read_pair.left}
-    call trim { input:forward=read_pair.left, reverse=read_pair.right, name=identify.name }
+    call identify {input:forward=left}
+    call trim { input:forward=left, reverse=.right, name=identify.name }
     call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
     call computeN50 { input:assembly=assemble.assembly }
     call profile { input:assembly=assemble.assembly }
@@ -50,10 +48,10 @@ workflow microrunqc {
         }
     # }
 
-    call aggregate {input: files=report.record}
+    # call aggregate {input: files=report.record}
 
     output {
-        File results = aggregate.result
+        File results = record.result
     }
 
     # call concatenate { input:profiles=profile.profil }
