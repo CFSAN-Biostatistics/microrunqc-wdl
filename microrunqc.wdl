@@ -277,30 +277,29 @@ task stat {
         File coverages
     }
 
-    command <<<
-        python <<CODE
-            import statistics
-            import json
-            # Simple statistical computations for insert size and assembly coverage
-            lengths = []
-            with open("~{samfile}") as sam:
-                for line in sam:
-                    if not line.startswith('@'):
-                        length = abs(int(line.rsplit()[8]))
-                        if length:
-                            lengths.append(length)
+    command <<< python <<CODE
+import statistics
+import json
+# Simple statistical computations for insert size and assembly coverage
+lengths = []
+with open("~{samfile}") as sam:
+    for line in sam:
+        if not line.startswith('@'):
+            length = abs(int(line.rsplit()[8]))
+            if length:
+                lengths.append(length)
 
-            median_insert = statistics.median(lengths)
+median_insert = statistics.median(lengths)
 
-            with open("~{coverages}") as coverages:
-                cvgs = [float(line.strip()) for line in coverages]
+with open("~{coverages}") as coverages:
+    cvgs = [float(line.strip()) for line in coverages]
 
-            average_coverage = statistics.mean(cvgs)
+average_coverage = statistics.mean(cvgs)
 
-            print(json.dumps(dict(
-                median_insert=median_insert,
-                average_coverage=average_coverage
-            )))
+print(json.dumps(dict(
+    median_insert=median_insert,
+    average_coverage=average_coverage
+)))
 CODE
     >>>
 
