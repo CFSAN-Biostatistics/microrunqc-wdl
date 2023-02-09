@@ -301,7 +301,7 @@ task stat {
             median_insert=median_insert,
             average_coverage=average_coverage
         )))
-        CODE
+    CODE
     >>>
 
     output {
