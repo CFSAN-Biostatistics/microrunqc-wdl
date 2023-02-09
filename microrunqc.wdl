@@ -268,7 +268,6 @@ task scan {
         file: "Assembly file in FASTA format"
         length: "Presumed genome lengthn"
     }
-
 }
 
 task stat {
