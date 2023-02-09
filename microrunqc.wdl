@@ -51,7 +51,7 @@ workflow microrunqc {
     # call aggregate {input: files=report.record}
 
     output {
-        File results = record.result
+        File results = report.record
     }
 
     # call concatenate { input:profiles=profile.profil }
@@ -410,31 +410,31 @@ CODE
 
 }
 
-task aggregate {
-    input {
-        Array[File] files
-    }
+# task aggregate {
+#     input {
+#         Array[File] files
+#     }
 
-    command <<<
-        echo "File,Contigs,Length,EstCov,N50,MedianInsert,MeanLength_R1,MeanLength_R2,MeanQ_R1,MeanQ_R2,Scheme,ST" > report.csv
-        cat ~{sep=' ' files} >> report.csv
-    >>>
+#     command <<<
+#         echo "File,Contigs,Length,EstCov,N50,MedianInsert,MeanLength_R1,MeanLength_R2,MeanQ_R1,MeanQ_R2,Scheme,ST" > report.csv
+#         cat ~{sep=' ' files} >> report.csv
+#     >>>
 
-    output {
-        File result = "report.csv"
-    }
+#     output {
+#         File result = "report.csv"
+#     }
 
-    runtime {
-        container: "ubuntu:xenial"
-        cpu: 1
-        memory: "512 MB"
-    }
+#     runtime {
+#         container: "ubuntu:xenial"
+#         cpu: 1
+#         memory: "512 MB"
+#     }
 
-    parameter_meta {
-        files: "Report rows from the report step"
-    }
+#     parameter_meta {
+#         files: "Report rows from the report step"
+#     }
 
-}
+# }
 
 # task concatenate {
 #     input {
