@@ -65,7 +65,7 @@ workflow microrunqc {
 
 }
 
-# xenial is the baseimage for almost all the staphb containers so we probably already have it
+# xenial is the baseimage for almost all the staphb dockers so we probably already have it
 
 task identify {
 
@@ -83,7 +83,7 @@ task identify {
     }
 
     runtime {
-        container: "ubuntu:xenial"
+        docker: "ubuntu:xenial"
         cpu: 1
         memory: "1024 MB"
     }
@@ -119,7 +119,7 @@ task trim {
     }
 
     runtime {
-        container: "staphb/trimmomatic:0.39"
+        docker: "staphb/trimmomatic:0.39"
         cpu: 2
         memory: "1024 MB"
     }
@@ -154,7 +154,7 @@ task assemble {
     }
 
     runtime {
-        container: "staphb/skesa:2.4.0"
+        docker: "staphb/skesa:2.4.0"
         cpu: 8
         memory: "4096 MB"
     }
@@ -182,7 +182,7 @@ task sam {
     }
 
     runtime {
-        container: "staphb/samtools:latest"
+        docker: "staphb/samtools:latest"
         cpu: 1
         memory: "512 MB"
     }
@@ -208,7 +208,7 @@ task bioawk {
     }
 
     runtime {
-        container: "cmkobel/bioawk:latest"
+        docker: "cmkobel/bioawk:latest"
         cpu: 1
         memory: "512 MB"
     }
@@ -234,7 +234,7 @@ task profile {
     }
 
     runtime {
-        container: "staphb/mlst:2.23.0"
+        docker: "staphb/mlst:2.23.0"
         cpu: 8
         memory: "4096 MB"
     }
@@ -260,7 +260,7 @@ task scan {
     }
 
     runtime {
-        container: "staphb/fastq-scan:latest"
+        docker: "staphb/fastq-scan:latest"
         cpu: 1
         memory: "512 MB"
     }
@@ -310,7 +310,7 @@ task stat {
     }
 
     runtime {
-        container: "python:3.10"
+        docker: "python:3.10"
         cpu: 1
         memory: "512 MB"
     }
@@ -336,7 +336,7 @@ task computeN50 {
     }
 
     runtime {
-        container: "staphb/seqtk:latest"
+        docker: "staphb/seqtk:latest"
         cpu: 1
         memory: "512 MB"
     }
@@ -392,7 +392,7 @@ CODE
     }
 
     runtime {
-        container: "python:3.10"
+        docker: "python:3.10"
         cpu: 1
         memory: "512 MB"
     }
