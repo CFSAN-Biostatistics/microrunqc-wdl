@@ -9,12 +9,15 @@ import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 workflow microrunqc {
 
     input {
-        Pair[File, File] read_pair
+        File left
+        File right
         Int max_threads = 8
         # String bwa_container = "staphb/bwa:0.7.17"
     }
 
     # scatter (read_pair in paired_reads) {
+
+    Pair[File, File] read_pair = [left, right]
 
     call identify {input:forward=read_pair.left}
     call trim { input:forward=read_pair.left, reverse=read_pair.right, name=identify.name }
