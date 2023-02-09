@@ -9,43 +9,43 @@ import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 workflow microrunqc {
 
     input {
-        Array[Pair[File, File]] paired_reads
+        Pair[File, File] read_pair
         Int max_threads = 8
         # String bwa_container = "staphb/bwa:0.7.17"
     }
 
-    scatter (read_pair in paired_reads) {
+    # scatter (read_pair in paired_reads) {
 
-        call identify {input:forward=read_pair.left}
-        call trim { input:forward=read_pair.left, reverse=read_pair.right, name=identify.name }
-        call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
-        call computeN50 { input:assembly=assemble.assembly }
-        call profile { input:assembly=assemble.assembly }
-        call bioawk { input:assembly=assemble.assembly }
-        call scan as scan_forward { input:file=trim.forward_t, length=bioawk.size }
-        call scan as scan_reverse { input:file=trim.reverse_t, length=bioawk.size }
-        call bwa.Index { input:fasta=assemble.assembly }
-        call bwa.Mem {
-            input:read1=trim.forward_t, 
-                  read2=trim.reverse_t, 
-                  bwaIndex=Index.index,
-                  outputPrefix=identify.name,
-                  threads=max_threads
-            }
-        call sam { input:bamfile=Mem.outputBam }
-        call stat { input:samfile=sam.samfile, coverages=assemble.coverages }
-        call report {
-            input: 
-                name=identify.name,
-                size=bioawk.size,
-                num_contigs=assemble.num_contigs,
-                n50 = computeN50.n50,
-                mlst=profile.report, 
-                fscan=scan_forward.result, 
-                rscan=scan_reverse.result,
-                stats=stat.result
-            }
-    }
+    call identify {input:forward=read_pair.left}
+    call trim { input:forward=read_pair.left, reverse=read_pair.right, name=identify.name }
+    call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
+    call computeN50 { input:assembly=assemble.assembly }
+    call profile { input:assembly=assemble.assembly }
+    call bioawk { input:assembly=assemble.assembly }
+    call scan as scan_forward { input:file=trim.forward_t, length=bioawk.size }
+    call scan as scan_reverse { input:file=trim.reverse_t, length=bioawk.size }
+    call bwa.Index { input:fasta=assemble.assembly }
+    call bwa.Mem {
+        input:read1=trim.forward_t, 
+                read2=trim.reverse_t, 
+                bwaIndex=Index.index,
+                outputPrefix=identify.name,
+                threads=max_threads
+        }
+    call sam { input:bamfile=Mem.outputBam }
+    call stat { input:samfile=sam.samfile, coverages=assemble.coverages }
+    call report {
+        input: 
+            name=identify.name,
+            size=bioawk.size,
+            num_contigs=assemble.num_contigs,
+            n50 = computeN50.n50,
+            mlst=profile.report, 
+            fscan=scan_forward.result, 
+            rscan=scan_reverse.result,
+            stats=stat.result
+        }
+    # }
 
     call aggregate {input: files=report.record}
 
