@@ -9,16 +9,16 @@ import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 workflow microrunqc {
 
     input {
-        File left
-        File right
+        File forward
+        File reverse
         Int max_threads = 8
         # String bwa_container = "staphb/bwa:0.7.17"
     }
 
     # scatter (read_pair in paired_reads) {
 
-    call identify {input:forward=left}
-    call trim { input:forward=left, reverse=right, name=identify.name }
+    call identify { input:forward=forward }
+    call trim { input:forward=forward, reverse=reverse, name=identify.name }
     call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
     call computeN50 { input:assembly=assemble.assembly }
     call profile { input:assembly=assemble.assembly }
