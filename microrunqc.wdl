@@ -9,49 +9,48 @@ import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 workflow microrunqc {
 
     input {
-        File forward
-        File reverse
+        Array[Pair[File, File]] paired_reads
         Int max_threads = 8
         # String bwa_container = "staphb/bwa:0.7.17"
     }
 
-    # scatter (read_pair in paired_reads) {
+    scatter (read_pair in paired_reads) {
 
-    call identify { input:forward=forward }
-    call trim { input:forward=forward, reverse=reverse, name=identify.name }
-    call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
-    call computeN50 { input:assembly=assemble.assembly }
-    call profile { input:assembly=assemble.assembly }
-    call bioawk { input:assembly=assemble.assembly }
-    call scan as scan_forward { input:file=trim.forward_t, length=bioawk.size }
-    call scan as scan_reverse { input:file=trim.reverse_t, length=bioawk.size }
-    call bwa.Index { input:fasta=assemble.assembly }
-    call bwa.Mem {
-        input:read1=trim.forward_t, 
-                read2=trim.reverse_t, 
-                bwaIndex=Index.index,
-                outputPrefix=identify.name,
-                threads=max_threads
+        call identify { input:forward=read_pair.left }
+        call trim { input:forward=read_pair.left, reverse=read_pair.right, name=identify.name }
+        call assemble { input:forward=trim.forward_t, reverse=trim.reverse_t, name=identify.name }
+        call computeN50 { input:assembly=assemble.assembly }
+        call profile { input:assembly=assemble.assembly }
+        call bioawk { input:assembly=assemble.assembly }
+        call scan as scan_forward { input:file=trim.forward_t, length=bioawk.size }
+        call scan as scan_reverse { input:file=trim.reverse_t, length=bioawk.size }
+        call bwa.Index { input:fasta=assemble.assembly }
+        call bwa.Mem {
+            input:read1=trim.forward_t, 
+                    read2=trim.reverse_t, 
+                    bwaIndex=Index.index,
+                    outputPrefix=identify.name,
+                    threads=max_threads
+            }
+        call sam { input:bamfile=Mem.outputBam }
+        call stat { input:samfile=sam.samfile, coverages=assemble.coverages }
+        call report {
+            input: 
+                name=identify.name,
+                size=bioawk.size,
+                num_contigs=assemble.num_contigs,
+                n50 = computeN50.n50,
+                mlst=profile.report, 
+                fscan=scan_forward.result, 
+                rscan=scan_reverse.result,
+                stats=stat.result
+            }
         }
-    call sam { input:bamfile=Mem.outputBam }
-    call stat { input:samfile=sam.samfile, coverages=assemble.coverages }
-    call report {
-        input: 
-            name=identify.name,
-            size=bioawk.size,
-            num_contigs=assemble.num_contigs,
-            n50 = computeN50.n50,
-            mlst=profile.report, 
-            fscan=scan_forward.result, 
-            rscan=scan_reverse.result,
-            stats=stat.result
-        }
-    # }
 
-    # call aggregate {input: files=report.record}
+    call aggregate {input: files=report.record}
 
     output {
-        File results = report.record
+        File results = aggregate.result
     }
 
     # call concatenate { input:profiles=profile.profil }
@@ -410,31 +409,31 @@ CODE
 
 }
 
-# task aggregate {
-#     input {
-#         Array[File] files
-#     }
+task aggregate {
+    input {
+        Array[File] files
+    }
 
-#     command <<<
-#         echo "File,Contigs,Length,EstCov,N50,MedianInsert,MeanLength_R1,MeanLength_R2,MeanQ_R1,MeanQ_R2,Scheme,ST" > report.csv
-#         cat ~{sep=' ' files} >> report.csv
-#     >>>
+    command <<<
+        echo "File,Contigs,Length,EstCov,N50,MedianInsert,MeanLength_R1,MeanLength_R2,MeanQ_R1,MeanQ_R2,Scheme,ST" > report.csv
+        cat ~{sep=' ' files} >> report.csv
+    >>>
 
-#     output {
-#         File result = "report.csv"
-#     }
+    output {
+        File result = "report.csv"
+    }
 
-#     runtime {
-#         container: "ubuntu:xenial"
-#         cpu: 1
-#         memory: "512 MB"
-#     }
+    runtime {
+        container: "ubuntu:xenial"
+        cpu: 1
+        memory: "512 MB"
+    }
 
-#     parameter_meta {
-#         files: "Report rows from the report step"
-#     }
+    parameter_meta {
+        files: "Report rows from the report step"
+    }
 
-# }
+}
 
 # task concatenate {
 #     input {
