@@ -236,7 +236,7 @@ task profile {
     runtime {
         docker: "staphb/mlst:2.23.0"
         cpu: 8
-        memory: "4096 MB"
+        memory: "8192 MB"
     }
 
     parameter_meta {
@@ -262,7 +262,7 @@ task scan {
     runtime {
         docker: "staphb/fastq-scan:latest"
         cpu: 1
-        memory: "512 MB"
+        memory: "4096 MB"
     }
 
     parameter_meta {
@@ -312,7 +312,7 @@ task stat {
     runtime {
         docker: "python:3.10"
         cpu: 1
-        memory: "512 MB"
+        memory: "2048 MB"
     }
 
     parameter_meta {
@@ -338,7 +338,7 @@ task computeN50 {
     runtime {
         docker: "staphb/seqtk:latest"
         cpu: 1
-        memory: "512 MB"
+        memory: "2048 MB"
     }
 
     parameter_meta {
@@ -394,7 +394,7 @@ CODE
     runtime {
         docker: "python:3.10"
         cpu: 1
-        memory: "512 MB"
+        memory: "2048 MB"
     }
 
     parameter_meta {
