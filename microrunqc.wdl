@@ -51,7 +51,7 @@ workflow microrunqc {
     # call aggregate {input: files=report.record}
 
     output {
-        File results = report.record
+        Report results = report.record
     }
 
     # call concatenate { input:profiles=profile.profil }
@@ -280,29 +280,29 @@ task stat {
 
     command<<< 
     python <<CODE
-    import statistics
-    import json
-    # Simple statistical computations for insert size and assembly coverage
-    lengths = []
-    with open("~{samfile}") as sam:
-        for line in sam:
-            if not line.startswith('@'):
-                length = abs(int(line.rsplit()[8]))
-                if length:
-                    lengths.append(length)
+import statistics
+import json
+# Simple statistical computations for insert size and assembly coverage
+lengths = []
+with open("~{samfile}") as sam:
+    for line in sam:
+        if not line.startswith('@'):
+            length = abs(int(line.rsplit()[8]))
+            if length:
+                lengths.append(length)
 
-    median_insert = statistics.median(lengths)
+median_insert = statistics.median(lengths)
 
-    with open("~{coverages}") as coverages:
-        cvgs = [float(line.strip()) for line in coverages]
+with open("~{coverages}") as coverages:
+    cvgs = [float(line.strip()) for line in coverages]
 
-    average_coverage = statistics.mean(cvgs)
+average_coverage = statistics.mean(cvgs)
 
-    print(json.dumps(dict(
-        median_insert=median_insert,
-        average_coverage=average_coverage
-    )))
-    CODE
+print(json.dumps(dict(
+    median_insert=median_insert,
+    average_coverage=average_coverage
+)))
+CODE
     >>>
 
     output {
@@ -346,6 +346,21 @@ task computeN50 {
     }
 }
 
+struct Report {
+    String file
+    Int contigs
+    Int length
+    Int estcov
+    Int n50
+    Int median_insert
+    Int mean_length_r1
+    Int mean_length_r2
+    Int meanQ_r1
+    Int meanQ_r2
+    String Scheme
+    String ST
+}
+
 task report {
     input {
         String name = "sample"
@@ -362,24 +377,25 @@ task report {
         python <<CODE
 import json
 import csv
-with open("~{name}.csv", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}") as fscan, open("~{rscan}") as rscan:
+with open("~{name}.tsv", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}") as fscan, open("~{rscan}") as rscan:
     fw = json.load(fscan)
     rv = json.load(rscan)
-    keys = ('File','Contigs','Length','EstCov','N50','MedianInsert','MeanLength_R1','MeanLength_R2','MeanQ_R1','MeanQ_R2','Scheme','ST')
+    keys = ('file','contigs','length','estcov','n50','median_insert','mean_length_r1','mean_length_r2','meanQ_r1','meanQ_r2','Scheme','ST')
     rdr = csv.reader(mlst, delimiter="\t")
     _, scheme, st, *_ = next(rdr)
-    wtr = csv.DictWriter(record, fieldnames=keys) # we're just using the keys to set the field order
+    wtr = csv.DictWriter(record, fieldnames=keys, delimite'\t') # we're just using the keys to set the field order
+    wtr.writeheader()
     rec = dict(
-        File="~{name}",
-        Contigs="~{num_contigs}",
-        Length="~{size}",
-        EstCov='~{stats["average_coverage"]}',
-        N50="~{n50}",
-        MedianInsert='~{stats["median_insert"]}',
-        MeanLength_R1=fw['qc_stats']['read_mean'],
-        MeanLength_R2=rv['qc_stats']['read_mean'],
-        MeanQ_R1=fw['qc_stats']['qual_mean'],
-        MeanQ_R2=rv['qc_stats']['qual_mean'],
+        file="~{name}",
+        contigs="~{num_contigs}",
+        length="~{size}",
+        estcov='~{stats["average_coverage"]}',
+        n50="~{n50}",
+        median_insert='~{stats["median_insert"]}',
+        mean_length_r1=fw['qc_stats']['read_mean'],
+        mean_length_r2=rv['qc_stats']['read_mean'],
+        meanQ_r1=fw['qc_stats']['qual_mean'],
+        meanQ_r2=rv['qc_stats']['qual_mean'],
         Scheme=scheme,
         ST=st
     )
@@ -388,7 +404,7 @@ CODE
     >>>
 
     output {
-        File record = "~{name}.csv"
+        Report record = read_object("~{name}.tsv")
     }
 
     runtime {
