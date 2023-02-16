@@ -51,7 +51,7 @@ workflow microrunqc {
     # call aggregate {input: files=report.record}
 
     output {
-        Report results = report.record
+        Object results = report.record
     }
 
     # call concatenate { input:profiles=profile.profil }
