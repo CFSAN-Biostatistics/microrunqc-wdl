@@ -383,7 +383,7 @@ with open("~{name}.tsv", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}
     keys = ('file','contigs','length','estcov','n50','median_insert','mean_length_r1','mean_length_r2','meanQ_r1','meanQ_r2','Scheme','ST')
     rdr = csv.reader(mlst, delimiter="\t")
     _, scheme, st, *_ = next(rdr)
-    wtr = csv.DictWriter(record, fieldnames=keys, delimite'\t') # we're just using the keys to set the field order
+    wtr = csv.DictWriter(record, fieldnames=keys, delimiter='\t') # we're just using the keys to set the field order
     wtr.writeheader()
     rec = dict(
         file="~{name}",
