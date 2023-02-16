@@ -346,20 +346,20 @@ task computeN50 {
     }
 }
 
-# struct Report {
-#     String file
-#     Int contigs
-#     Int length
-#     Int estcov
-#     Int n50
-#     Int median_insert
-#     Int mean_length_r1
-#     Int mean_length_r2
-#     Int meanQ_r1
-#     Int meanQ_r2
-#     String Scheme
-#     String ST
-# }
+struct Report {
+    String file
+    Int contigs
+    Int length
+    Int estcov
+    Int n50
+    Int median_insert
+    Int mean_length_r1
+    Int mean_length_r2
+    Int meanQ_r1
+    Int meanQ_r2
+    String Scheme
+    String ST
+}
 
 task report {
     input {
