@@ -6,6 +6,21 @@ version 1.0
 import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 # import "https://github.com/biowdl/tasks/raw/develop/bwa-mem2.wdl" as bwa2
 
+struct Report {
+    String file
+    Int contigs
+    Int length
+    Int estcov
+    Int n50
+    Int median_insert
+    Int mean_length_r1
+    Int mean_length_r2
+    Int meanQ_r1
+    Int meanQ_r2
+    String Scheme
+    String ST
+}
+
 workflow microrunqc {
 
     input {
@@ -51,7 +66,18 @@ workflow microrunqc {
     # call aggregate {input: files=report.record}
 
     output {
-        Object results = report.record
+        String file = identify.name
+        Int contigs = report.record.contigs
+        Int length = report.record.length
+        Int estcov = report.record.estcov
+        Int n50 = report.record.n50
+        Int median_insert = report.record.median_insert
+        Int mean_length_r1 = report.record.mean_length_r1
+        Int mean_length_r2 = report.record.mean_length_r2
+        Int meanQ_r1 = report.record.meanQ_r1
+        Int meanQ_r2 = report.record.meanQ_r2
+        String scheme = report.record.Scheme
+        String ST = report.record.ST
     }
 
     # call concatenate { input:profiles=profile.profil }
@@ -344,21 +370,6 @@ task computeN50 {
     parameter_meta {
         assembly: "Assembly file in FASTA"
     }
-}
-
-struct Report {
-    String file
-    Int contigs
-    Int length
-    Int estcov
-    Int n50
-    Int median_insert
-    Int mean_length_r1
-    Int mean_length_r2
-    Int meanQ_r1
-    Int meanQ_r2
-    String Scheme
-    String ST
 }
 
 task report {
