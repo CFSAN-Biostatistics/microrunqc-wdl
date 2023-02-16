@@ -10,13 +10,13 @@ struct Report {
     String file
     Int contigs
     Int length
-    Int estcov
+    Float estcov
     Int n50
-    Int median_insert
-    Int mean_length_r1
-    Int mean_length_r2
-    Int meanQ_r1
-    Int meanQ_r2
+    Float median_insert
+    Float mean_length_r1
+    Float mean_length_r2
+    Float meanQ_r1
+    Float meanQ_r2
     String Scheme
     String ST
 }
@@ -69,13 +69,13 @@ workflow microrunqc {
         String file = identify.name
         Int contigs = report.record.contigs
         Int length = report.record.length
-        Int estcov = report.record.estcov
+        Float estcov = report.record.estcov
         Int n50 = report.record.n50
-        Int median_insert = report.record.median_insert
-        Int mean_length_r1 = report.record.mean_length_r1
-        Int mean_length_r2 = report.record.mean_length_r2
-        Int meanQ_r1 = report.record.meanQ_r1
-        Int meanQ_r2 = report.record.meanQ_r2
+        Float median_insert = report.record.median_insert
+        Float mean_length_r1 = report.record.mean_length_r1
+        Float mean_length_r2 = report.record.mean_length_r2
+        Float meanQ_r1 = report.record.meanQ_r1
+        Float meanQ_r2 = report.record.meanQ_r2
         String scheme = report.record.Scheme
         String ST = report.record.ST
     }
