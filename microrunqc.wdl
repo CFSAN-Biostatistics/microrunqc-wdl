@@ -262,7 +262,7 @@ task scan {
     runtime {
         docker: "staphb/fastq-scan:latest"
         cpu: 1
-        memory: "4096 MB"
+        memory: "8192 MB"
     }
 
     parameter_meta {
