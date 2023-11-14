@@ -67,17 +67,17 @@ workflow microrunqc {
 
     output {
         String file = identify.name
-        Int contigs = report.record.contigs
-        Int length = report.record.length
-        Float estcov = report.record.estcov
-        Int n50 = report.record.n50
-        Float median_insert = report.record.median_insert
-        Float mean_length_r1 = report.record.mean_length_r1
-        Float mean_length_r2 = report.record.mean_length_r2
-        Float meanQ_r1 = report.record.meanQ_r1
-        Float meanQ_r2 = report.record.meanQ_r2
-        String scheme = report.record.Scheme
-        String ST = report.record.ST
+        Int contigs = report.record["contigs"]
+        Int length = report.record["length"]
+        Float estcov = report.record["estcov"]
+        Int n50 = report.record["n50"]
+        Float median_insert = report.record["median_insert"]
+        Float mean_length_r1 = report.record["mean_length_r1"]
+        Float mean_length_r2 = report.record["mean_length_r2"]
+        Float meanQ_r1 = report.record["meanQ_r1"]
+        Float meanQ_r2 = report.record["meanQ_r2"]
+        String scheme = report.record["Scheme"]
+        String ST = report.record["ST"]
     }
 
     # call concatenate { input:profiles=profile.profil }
@@ -234,7 +234,7 @@ task bioawk {
     }
 
     runtime {
-        docker: "cmkobel/bioawk:latest"
+        docker: "lbmc/bioawk:1.0"
         cpu: 1
         memory: "512 MB"
     }
@@ -388,14 +388,14 @@ task report {
         python <<CODE
 import json
 import csv
-with open("~{name}.tsv", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}") as fscan, open("~{rscan}") as rscan:
+with open("~{name}.json", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}") as fscan, open("~{rscan}") as rscan:
     fw = json.load(fscan)
     rv = json.load(rscan)
     keys = ('file','contigs','length','estcov','n50','median_insert','mean_length_r1','mean_length_r2','meanQ_r1','meanQ_r2','Scheme','ST')
     rdr = csv.reader(mlst, delimiter="\t")
     _, scheme, st, *_ = next(rdr)
-    wtr = csv.DictWriter(record, fieldnames=keys, delimiter='\t') # we're just using the keys to set the field order
-    wtr.writeheader()
+    # wtr = csv.DictWriter(record, fieldnames=keys, delimiter='\t') # we're just using the keys to set the field order
+    # wtr.writeheader()
     rec = dict(
         file="~{name}",
         contigs="~{num_contigs}",
@@ -410,12 +410,13 @@ with open("~{name}.tsv", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}
         Scheme=scheme,
         ST=st
     )
-    wtr.writerow(rec)
+    # wtr.writerow(rec)
+    json.dump(rec, record)
 CODE
     >>>
 
     output {
-        Object record = read_object("~{name}.tsv")
+        Map[String, String] record = read_json("~{name}.json")
     }
 
     runtime {
