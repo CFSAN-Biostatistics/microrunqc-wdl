@@ -1,7 +1,7 @@
 # FDA-CFSAN microrunqc-wdl
 # Author: Justin Payne (justin.payne@fda.hhs.gov)
 
-version 1.0 #version 1.1
+version 1.1
 
 import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 # import "https://github.com/biowdl/tasks/raw/develop/bwa-mem2.wdl" as bwa2
