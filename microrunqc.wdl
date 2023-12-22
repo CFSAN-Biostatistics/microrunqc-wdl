@@ -1,7 +1,7 @@
 # FDA-CFSAN microrunqc-wdl
 # Author: Justin Payne (justin.payne@fda.hhs.gov)
 
-version 1.0
+version 1.1
 
 import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 # import "https://github.com/biowdl/tasks/raw/develop/bwa-mem2.wdl" as bwa2
@@ -21,7 +21,71 @@ struct Report {
     String ST
 }
 
+
+
 workflow microrunqc {
+
+    # Key Thresholds
+
+    Map[String, Int] depths = {
+        "senterica":30,
+        "senterica_achtman_2":30,
+        "lmonocytogenes":20,
+        "listeria_2":20,
+        "ecoli":40,
+        "ecoli_achtman_4":40,
+        "shigella":40,
+        "camplylobacter":20,
+        "vparahaemolyticus":40,
+        "cronobacter":20,
+        "efaecium":50,
+        "efaecalis":40
+    }
+
+    Map[String, Int] qualities = {
+        "senterica":30,
+        "senterica_achtman_2":30,
+        "lmonocytogenes":30,
+        "listeria_2":30,
+        "ecoli":30,
+        "ecoli_achtman_4":30,
+        "shigella":30,
+        "camplylobacter":30,
+        "vparahaemolyticus":30,
+        "cronobacter":30,
+        "efaecium":30,
+        "efaecalis":30
+    }
+
+    Map[String, Pair[Int, Int]] genome_sizes = {
+        "senterica":(4300000, 5200000),
+        "senterica_achtman_2":(4300000, 5200000),
+        "lmonocytogenes":(2700000,3200000),
+        "listeria_2":(2700000,3200000),
+        "ecoli":(4500000,5900000),
+        "ecoli_achtman_4":(4500000,5900000),
+        "shigella":(4000000,5000000),
+        "camplylobacter":(1500000,1900000),
+        "vparahaemolyticus":(4800000,5500000),
+        "cronobacter":(4000000,5000000),
+        "efaecium":(2500000,3500000),
+        "efaecalis":(2500000,3250000)
+    }
+
+    Map[String, Int] contig_nums = {
+        "senterica":300,
+        "senterica_achtman_2":300,
+        "lmonocytogenes":300,
+        "listeria_2":300,
+        "ecoli":400,
+        "ecoli_achtman_4":400,
+        "shigella":550,
+        "camplylobacter":300,
+        "vparahaemolyticus":300,
+        "cronobacter":500,
+        "efaecium":350,
+        "efaecalis":200
+    }
 
     input {
         File forward
@@ -61,6 +125,17 @@ workflow microrunqc {
             rscan=scan_reverse.result,
             stats=stat.result
         }
+
+    Array[String] keys = keys(depths)
+
+    scatter (key in keys){
+        if (key == report.record["Scheme"]){
+            Boolean found = true
+        }
+    }
+
+    Boolean scheme_present_in_depths = (length(select_all(found)) > 0)
+
     # }
 
     # call aggregate {input: files=report.record}
@@ -78,6 +153,14 @@ workflow microrunqc {
         Float meanQ_r2 = report.record["meanQ_r2"]
         String scheme = report.record["Scheme"]
         String ST = report.record["ST"]
+        String pass = if (scheme_present_in_depths) then (
+            if estcov >= depths[scheme] &&
+               meanQ_r1 >= qualities[scheme] &&
+               meanQ_r2 >= qualities[scheme] &&
+               length >= genome_sizes[scheme].left &&
+               length <= genome_sizes[scheme].right &&
+               contigs <= contig_nums[scheme]
+            then "pass" else "fail") else "undetermined" 
     }
 
     # call concatenate { input:profiles=profile.profil }
