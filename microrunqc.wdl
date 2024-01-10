@@ -1,7 +1,7 @@
 # FDA-CFSAN microrunqc-wdl
 # Author: Justin Payne (justin.payne@fda.hhs.gov)
 
-version 1.0 #version 1.1
+version 1.0
 
 import "https://github.com/biowdl/tasks/raw/develop/bwa.wdl" as bwa
 # import "https://github.com/biowdl/tasks/raw/develop/bwa-mem2.wdl" as bwa2
@@ -25,67 +25,7 @@ struct Report {
 
 workflow microrunqc {
 
-    # Key Thresholds
 
-    Map[String, Int] depths = {
-        "senterica":30,
-        "senterica_achtman_2":30,
-        "lmonocytogenes":20,
-        "listeria_2":20,
-        "ecoli":40,
-        "ecoli_achtman_4":40,
-        "shigella":40,
-        "camplylobacter":20,
-        "vparahaemolyticus":40,
-        "cronobacter":20,
-        "efaecium":50,
-        "efaecalis":40
-    }
-
-    Map[String, Int] qualities = {
-        "senterica":30,
-        "senterica_achtman_2":30,
-        "lmonocytogenes":30,
-        "listeria_2":30,
-        "ecoli":30,
-        "ecoli_achtman_4":30,
-        "shigella":30,
-        "camplylobacter":30,
-        "vparahaemolyticus":30,
-        "cronobacter":30,
-        "efaecium":30,
-        "efaecalis":30
-    }
-
-    Map[String, Pair[Int, Int]] genome_sizes = {
-        "senterica":(4300000, 5200000),
-        "senterica_achtman_2":(4300000, 5200000),
-        "lmonocytogenes":(2700000,3200000),
-        "listeria_2":(2700000,3200000),
-        "ecoli":(4500000,5900000),
-        "ecoli_achtman_4":(4500000,5900000),
-        "shigella":(4000000,5000000),
-        "camplylobacter":(1500000,1900000),
-        "vparahaemolyticus":(4800000,5500000),
-        "cronobacter":(4000000,5000000),
-        "efaecium":(2500000,3500000),
-        "efaecalis":(2500000,3250000)
-    }
-
-    Map[String, Int] contig_nums = {
-        "senterica":300,
-        "senterica_achtman_2":300,
-        "lmonocytogenes":300,
-        "listeria_2":300,
-        "ecoli":400,
-        "ecoli_achtman_4":400,
-        "shigella":550,
-        "camplylobacter":300,
-        "vparahaemolyticus":300,
-        "cronobacter":500,
-        "efaecium":350,
-        "efaecalis":200
-    }
 
     input {
         File forward
@@ -126,16 +66,6 @@ workflow microrunqc {
             stats=stat.result
         }
 
-    Array[String] keys = keys(depths)
-
-    scatter (key in keys){
-        if (key == report.record["Scheme"]){
-            Boolean found = true
-        }
-    }
-
-    Boolean scheme_present_in_depths = (length(select_all(found)) > 0)
-
     # }
 
     # call aggregate {input: files=report.record}
@@ -153,14 +83,7 @@ workflow microrunqc {
         Float meanQ_r2 = report.record["meanQ_r2"]
         String scheme = report.record["Scheme"]
         String ST = report.record["ST"]
-        String pass = if (scheme_present_in_depths) then (
-            if estcov >= depths[scheme] &&
-               meanQ_r1 >= qualities[scheme] &&
-               meanQ_r2 >= qualities[scheme] &&
-               length >= genome_sizes[scheme].left &&
-               length <= genome_sizes[scheme].right &&
-               contigs <= contig_nums[scheme]
-            then "pass" else "fail") else "undetermined" 
+        String pass = report.record["_Pass"]
     }
 
     # call concatenate { input:profiles=profile.profil }
@@ -471,6 +394,69 @@ task report {
         python <<CODE
 import json
 import csv
+
+# Key Thresholds
+
+depths = {
+    "senterica":30.0,
+    "senterica_achtman_2":30.0,
+    "lmonocytogenes":20.0,
+    "listeria_2":20.0,
+    "ecoli":40.0,
+    "ecoli_achtman_4":40.0,
+    "shigella":40.0,
+    "camplylobacter":20.0,
+    "vparahaemolyticus":40.0,
+    "cronobacter":20.0,
+    "efaecium":50.0,
+    "efaecalis":40.0
+}
+
+qualities = {
+    "senterica":30.0,
+    "senterica_achtman_2":30.0,
+    "lmonocytogenes":30.0,
+    "listeria_2":30.0,
+    "ecoli":30.0,
+    "ecoli_achtman_4":30.0,
+    "shigella":30.0,
+    "camplylobacter":30.0,
+    "vparahaemolyticus":30.0,
+    "cronobacter":30.0,
+    "efaecium":30.0,
+    "efaecalis":30.0
+}
+
+genome_sizes = {
+    "senterica":(4300000, 5200000),
+    "senterica_achtman_2":(4300000, 5200000),
+    "lmonocytogenes":(2700000,3200000),
+    "listeria_2":(2700000,3200000),
+    "ecoli":(4500000,5900000),
+    "ecoli_achtman_4":(4500000,5900000),
+    "shigella":(4000000,5000000),
+    "camplylobacter":(1500000,1900000),
+    "vparahaemolyticus":(4800000,5500000),
+    "cronobacter":(4000000,5000000),
+    "efaecium":(2500000,3500000),
+    "efaecalis":(2500000,3250000)
+}
+
+contig_nums = {
+    "senterica":300,
+    "senterica_achtman_2":300,
+    "lmonocytogenes":300,
+    "listeria_2":300,
+    "ecoli":400,
+    "ecoli_achtman_4":400,
+    "shigella":550,
+    "camplylobacter":300,
+    "vparahaemolyticus":300,
+    "cronobacter":500,
+    "efaecium":350,
+    "efaecalis":200
+}
+
 with open("~{name}.json", 'w') as record, open("~{mlst}") as mlst, open("~{fscan}") as fscan, open("~{rscan}") as rscan:
     fw = json.load(fscan)
     rv = json.load(rscan)
@@ -479,6 +465,22 @@ with open("~{name}.json", 'w') as record, open("~{mlst}") as mlst, open("~{fscan
     _, scheme, st, *_ = next(rdr)
     # wtr = csv.DictWriter(record, fieldnames=keys, delimiter='\t') # we're just using the keys to set the field order
     # wtr.writeheader()
+
+    try:
+        _pass = "undetermined"
+        if scheme in depths:
+            if ~{stats["average_coverage"]} >= depths[scheme] and \
+               float(fw['qc_stats']['read_mean']) >= qualities[scheme] and \
+               float(rv['qc_stats']['qual_mean']) >= qualities[scheme] and \
+               (genome_sizes[scheme][0] <= ~{size} <= genome_sizes[scheme][1]) and \
+               ~{num_contigs} <= contig_nums[scheme]:
+                _pass = "pass"
+            else:
+                _pass = "fail"
+
+    except Exception as e:
+        print(e)
+
     rec = dict(
         file="~{name}",
         contigs="~{num_contigs}",
@@ -491,7 +493,8 @@ with open("~{name}.json", 'w') as record, open("~{mlst}") as mlst, open("~{fscan
         meanQ_r1=fw['qc_stats']['qual_mean'],
         meanQ_r2=rv['qc_stats']['qual_mean'],
         Scheme=scheme,
-        ST=st
+        ST=st,
+        _Pass=_pass
     )
     # wtr.writerow(rec)
     json.dump(rec, record)
